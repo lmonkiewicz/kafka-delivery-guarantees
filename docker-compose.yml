@@ -1,0 +1,83 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    hostname: kafka # Important for advertised listeners
+    ports:
+      # Port for clients to connect from outside Docker network (e.g., your local machine if needed)
+      # Change 19092 to 9092 if you don't have Kafka running locally and want the standard port
+      - "19092:9092"
+      # KRaft controller port (not typically exposed externally for single node, but good to be aware of)
+      # - "19093:9093"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller' # Run as both broker and controller
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,EXTERNAL://localhost:19092' # For Kafka UI (internal) and host access
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093' # node_id@host:port
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT' # For broker-to-broker communication (even for single node)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0 # For faster consumer group joins in dev
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      # Replace with the UUID you generated above
+      CLUSTER_ID: 'BxjYKgPRRhesdIxbW4R5pw' # <--- !!! REPLACE THIS !!!
+      # Optional: Confluent specific settings (can be omitted for basic Kafka)
+      CONFLUENT_METRICS_ENABLE: 'false' # Disable Confluent metrics reporter
+      CONFLUENT_SUPPORT_METRICS_ENABLE: 'false' # Disable Confluent support metrics
+      # Optional: Heap size for Kafka
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s # Give Kafka time to initialize KRaft metadata
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080" # Expose Kafka UI on host port 8080
+    depends_on:
+      kafka:
+        condition: service_healthy # Wait for Kafka to be healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: 'Local KRaft Kafka'
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka:9092' # Connect to Kafka using its service name
+      KAFKA_CLUSTERS_0_KRAFTENABLED: 'true' # Crucial for KRaft
+      # Optional: if you want to use JMX metrics (requires Kafka JMX port to be open and configured)
+      # KAFKA_CLUSTERS_0_JMXPORT: 9997
+      # KAFKA_CLUSTERS_0_READONLY: "false" # Allow write operations from UI
+      DYNAMIC_CONFIG_ENABLED: 'true' # To allow some configurations via UI
+    restart: on-failure
+
+
+  kafka-topic-creator:
+    image: confluentinc/cp-kafka:latest # Use the same Kafka image as it contains the necessary tools
+    container_name: kafka-topic-creator
+    depends_on:
+      kafka:
+        condition: service_healthy # Ensures Kafka is up and running before attempting to create topics
+    command: >
+      sh -c "
+        echo 'Waiting a few seconds for Kafka to be fully ready after healthcheck...' &&
+        sleep 5 && \
+        echo 'Attempting to create topic: at-most-once-topic' &&
+        kafka-topics --bootstrap-server kafka:9092 --create --topic at-most-once-topic --partitions 3 --replication-factor 1 --if-not-exists && echo 'Topic creation command executed successfully.' || echo 'Topic creation command failed.'
+        echo 'Attempting to create topic: at-least-once-topic' &&
+        kafka-topics --bootstrap-server kafka:9092 --create --topic at-least-once-topic --partitions 3 --replication-factor 1 --if-not-exists && echo 'Topic creation command executed successfully.' || echo 'Topic creation command failed.'
+        echo 'Attempting to create topic: exactly-once-topic' &&
+        kafka-topics --bootstrap-server kafka:9092 --create --topic exactly-once-topic --partitions 3 --replication-factor 1 --if-not-exists && echo 'Topic creation command executed successfully.' || echo 'Topic creation command failed.'
+      "
+    restart: 'no' # This service should run once and then exit. It won't restart if it completes successfully.
+
+
+volumes:
+  kafka-data:
+    driver: local
