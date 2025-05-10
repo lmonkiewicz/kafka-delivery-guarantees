@@ -1,43 +1,113 @@
 services:
-  kafka:
+  kafka1:
     image: confluentinc/cp-kafka:latest
-    container_name: kafka
-    hostname: kafka # Important for advertised listeners
+    container_name: kafka1
+    hostname: kafka1
     ports:
-      # Port for clients to connect from outside Docker network (e.g., your local machine if needed)
-      # Change 19092 to 9092 if you don't have Kafka running locally and want the standard port
-      - "19092:9092"
-      # KRaft controller port (not typically exposed externally for single node, but good to be aware of)
-      # - "19093:9093"
+      # Port zewnętrzny dla kafka1 (dostęp z hosta)
+      - "19092:29092"
     environment:
       KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: 'broker,controller' # Run as both broker and controller
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT'
-      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,EXTERNAL://localhost:19092' # For Kafka UI (internal) and host access
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093' # node_id@host:port
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      # INTERNAL: komunikacja między brokerami w sieci Docker
+      # CONTROLLER: komunikacja kworum KRaft w sieci Docker
+      # EXTERNAL: komunikacja z klientami spoza sieci Docker (np. z hosta)
+      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka1:9092,EXTERNAL://localhost:19092'
+      # KAFKA_CONTROLLER_QUORUM_VOTERS musi być taki sam dla wszystkich brokerów/kontrolerów
+      # Format: node_id1@host1:port1,node_id2@host2:port2,...
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093,3@kafka3:9093'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT' # For broker-to-broker communication (even for single node)
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0 # For faster consumer group joins in dev
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL' # Brokerzy używają tego listenera do komunikacji
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3    # Dla klastra 3-brokerowego
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3 # Dla klastra 3-brokerowego
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2        # Zalecane: liczba replik - 1
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_DIRS: '/var/lib/kafka/data'
-      # Replace with the UUID you generated above
-      CLUSTER_ID: 'BxjYKgPRRhesdIxbW4R5pw' # <--- !!! REPLACE THIS !!!
-      # Optional: Confluent specific settings (can be omitted for basic Kafka)
-      CONFLUENT_METRICS_ENABLE: 'false' # Disable Confluent metrics reporter
-      CONFLUENT_SUPPORT_METRICS_ENABLE: 'false' # Disable Confluent support metrics
-      # Optional: Heap size for Kafka
+      CLUSTER_ID: 'BxjYKgPRRhesdIxbW4R5pw' # <--- !!! UŻYJ TEGO SAMEGO ID DLA WSZYSTKICH BROKERÓW !!!
+      CONFLUENT_METRICS_ENABLE: 'false'
+      CONFLUENT_SUPPORT_METRICS_ENABLE: 'false'
       KAFKA_HEAP_OPTS: "-Xms512m -Xmx512m"
     volumes:
-      - kafka-data:/var/lib/kafka/data
+      - kafka1-data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list || exit 1"]
+      test: [ "CMD-SHELL", "kafka-topics --bootstrap-server kafka1:9092 --list || exit 1" ]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 30s # Give Kafka time to initialize KRaft metadata
+      retries: 10 # Zwiększone retries dla stabilizacji klastra
+      start_period: 60s # Dłuższy czas na start klastra
+
+  kafka2:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka2
+    hostname: kafka2
+    ports:
+      # Port zewnętrzny dla kafka2 (dostęp z hosta)
+      - "19093:29093"
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29093'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka2:9092,EXTERNAL://localhost:19093'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093,3@kafka3:9093'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      CLUSTER_ID: 'BxjYKgPRRhesdIxbW4R5pw' # <--- !!! UŻYJ TEGO SAMEGO ID DLA WSZYSTKICH BROKERÓW !!!
+      CONFLUENT_METRICS_ENABLE: 'false'
+      CONFLUENT_SUPPORT_METRICS_ENABLE: 'false'
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - kafka2-data:/var/lib/kafka/data
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-topics --bootstrap-server kafka2:9092 --list || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  kafka3:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka3
+    hostname: kafka3
+    ports:
+      # Port zewnętrzny dla kafka3 (dostęp z hosta)
+      - "19094:29094"
+    environment:
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29094'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka3:9092,EXTERNAL://localhost:19094'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093,3@kafka3:9093'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      CLUSTER_ID: 'BxjYKgPRRhesdIxbW4R5pw' # <--- !!! UŻYJ TEGO SAMEGO ID DLA WSZYSTKICH BROKERÓW !!!
+      CONFLUENT_METRICS_ENABLE: 'false'
+      CONFLUENT_SUPPORT_METRICS_ENABLE: 'false'
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - kafka3-data:/var/lib/kafka/data
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-topics --bootstrap-server kafka3:9092 --list || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -45,11 +115,15 @@ services:
     ports:
       - "8080:8080" # Expose Kafka UI on host port 8080
     depends_on:
-      kafka:
+      kafka1:
+        condition: service_healthy # Wait for Kafka to be healthy
+      kafka2:
+        condition: service_healthy # Wait for Kafka to be healthy
+      kafka3:
         condition: service_healthy # Wait for Kafka to be healthy
     environment:
       KAFKA_CLUSTERS_0_NAME: 'Local KRaft Kafka'
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka:9092' # Connect to Kafka using its service name
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka1:9092,kafka2:9093,kafka3:9094' # Connect to Kafka using its service name
       KAFKA_CLUSTERS_0_KRAFTENABLED: 'true' # Crucial for KRaft
       # Optional: if you want to use JMX metrics (requires Kafka JMX port to be open and configured)
       # KAFKA_CLUSTERS_0_JMXPORT: 9997
@@ -62,22 +136,27 @@ services:
     image: confluentinc/cp-kafka:latest # Use the same Kafka image as it contains the necessary tools
     container_name: kafka-topic-creator
     depends_on:
-      kafka:
-        condition: service_healthy # Ensures Kafka is up and running before attempting to create topics
+      kafka1:
+        condition: service_healthy # Wait for Kafka to be healthy
+      kafka2:
+        condition: service_healthy # Wait for Kafka to be healthy
+      kafka3:
+        condition: service_healthy # Wait for Kafka to be healthy
     command: >
       sh -c "
         echo 'Waiting a few seconds for Kafka to be fully ready after healthcheck...' &&
         sleep 5 && \
-        echo 'Attempting to create topic: at-most-once-topic' &&
-        kafka-topics --bootstrap-server kafka:9092 --create --topic at-most-once-topic --partitions 3 --replication-factor 1 --if-not-exists && echo 'Topic creation command executed successfully.' || echo 'Topic creation command failed.'
-        echo 'Attempting to create topic: at-least-once-topic' &&
-        kafka-topics --bootstrap-server kafka:9092 --create --topic at-least-once-topic --partitions 3 --replication-factor 1 --if-not-exists && echo 'Topic creation command executed successfully.' || echo 'Topic creation command failed.'
-        echo 'Attempting to create topic: exactly-once-topic' &&
-        kafka-topics --bootstrap-server kafka:9092 --create --topic exactly-once-topic --partitions 3 --replication-factor 1 --if-not-exists && echo 'Topic creation command executed successfully.' || echo 'Topic creation command failed.'
+        echo 'Attempting to create topic: app-execute_stuff-command' &&
+        kafka-topics --bootstrap-server kafka1:9092 --create --topic app-execute_stuff-command --partitions 3 --replication-factor 3 --if-not-exists && echo 'Topic creation command executed successfully.' || echo 'Topic creation command failed.'
+        kafka-topics --bootstrap-server kafka1:9092 --describe --topic app-execute_stuff-command
+        echo 'Attempting to create topic: app-stuff_executed-event' &&
+        kafka-topics --bootstrap-server kafka1:9092 --create --topic app-stuff_executed-event --partitions 3 --replication-factor 3 --if-not-exists && echo 'Topic creation command executed successfully.' || echo 'Topic creation command failed.'
+        kafka-topics --bootstrap-server kafka1:9092 --describe --topic app-stuff_executed-event
       "
     restart: 'no' # This service should run once and then exit. It won't restart if it completes successfully.
 
 
 volumes:
-  kafka-data:
-    driver: local
+  kafka1-data:
+  kafka2-data:
+  kafka3-data:

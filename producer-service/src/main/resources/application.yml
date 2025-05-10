@@ -1,1 +1,18 @@
-spring.application.name: producer-service
+server:
+  port: 8081
+
+spring:
+  application.name: producer-service
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:19092,localhost:19093,localhost:19094
+          producer-properties:
+            key.serializer: org.apache.kafka.common.serialization.StringSerializer
+
+      output-bindings: "executeStuffCommand"
+
+      bindings:
+        executeStuffCommand:
+          destination: app-execute_stuff-command

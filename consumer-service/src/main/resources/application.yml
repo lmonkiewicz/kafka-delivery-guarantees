@@ -1,1 +1,23 @@
-spring.application.name: consumer-service
+server:
+  port: 8083
+
+spring:
+  application.name: consumer-service
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:19092,localhost:19093,localhost:19094
+          consumer-properties:
+            key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+
+      function:
+        definition: "stuffExecutedEvent"
+
+      bindings:
+        stuffExecutedEvent-in-0:
+          destination: app-stuff_executed-event
+          group: app-stuff_executed-event-service
+          consumer:
+            concurrency: 3

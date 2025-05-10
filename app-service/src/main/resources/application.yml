@@ -1,0 +1,27 @@
+server:
+  port: 8082
+
+spring:
+  application.name: app-service
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:19092,localhost:19093,localhost:19094
+          producer-properties:
+            key.serializer: org.apache.kafka.common.serialization.StringSerializer
+          consumer-properties:
+            key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+
+      function:
+        definition: executeStuffCommand
+
+      bindings:
+        executeStuffCommand-in-0:
+          destination: app-execute_stuff-command
+          group: app-service
+          consumer:
+            concurrency: 3
+        executeStuffCommand-out-0:
+          destination: app-stuff_executed-event
