@@ -1,0 +1,10 @@
+spring:
+  cloud:
+    stream:
+      kafka:
+        bindings:
+          executeStuffCommand:
+            producer:
+              configuration:
+                enable.idempotence: true # To również ustawia acks=all, retries na b. dużą wartość i dba o porządek
+                delivery.timeout.ms: 120000 # Dłuższy czas na dostarczenie, wliczając ponowienia

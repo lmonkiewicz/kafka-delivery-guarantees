@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ALO - AppServiceApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <option name="ACTIVE_PROFILES" value="at-least-once" />
+    <module name="app-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="pl.effectivedev.webinar.kafka.guarantee.app.AppServiceApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

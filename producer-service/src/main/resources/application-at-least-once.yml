@@ -1,0 +1,13 @@
+spring:
+  cloud:
+    stream:
+      kafka:
+        bindings:
+          executeStuffCommand:
+            producer:
+              configuration:
+                acks: all        # Potwierdzenie od lidera i wszystkich replik in-sync
+                retries: 3       # Lub inna rozsądna liczba ponowień (np. Integer.MAX_VALUE z enable.idempotence=true)
+                # delivery.timeout.ms: 120000 # Dłuższy czas na dostarczenie, wliczając ponowienia
+                # Można rozważyć włączenie idempotencji, aby uniknąć duplikatów od producenta:
+                # enable.idempotence: true # To również ustawia acks=all, retries na b. dużą wartość i dba o porządek

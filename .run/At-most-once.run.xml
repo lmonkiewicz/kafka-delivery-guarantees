@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="At-most-once" type="CompoundRunConfigurationType">
+    <toRun name="AMO - AppServiceApplication" type="SpringBootApplicationConfigurationType" />
+    <toRun name="AMO - ConsumerServiceApplication" type="SpringBootApplicationConfigurationType" />
+    <toRun name="AMO - ProducerServiceApplication" type="SpringBootApplicationConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>

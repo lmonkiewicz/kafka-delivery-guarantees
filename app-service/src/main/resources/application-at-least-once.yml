@@ -1,0 +1,12 @@
+spring:
+  cloud:
+    stream:
+      kafka:
+        bindings:
+          executeStuffCommand-in-0:
+            consumer:
+              ack-mode: RECORD # Lub BATCH. Commit offsetu po pomyślnym przetworzeniu wiadomości/paczki.
+              configuration:
+                auto.offset.reset: earliest # Aby przetworzyć wiadomości od początku w razie braku zapisanego offsetu
+                # Należy zaimplementować logikę odporną na duplikaty (idempotentne przetwarzanie)
+                # lub mechanizm deduplikacji po stronie aplikacji.

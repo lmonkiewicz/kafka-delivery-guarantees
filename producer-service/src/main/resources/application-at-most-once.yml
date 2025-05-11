@@ -1,0 +1,11 @@
+spring:
+  cloud:
+    stream:
+      kafka:
+        bindings:
+          executeStuffCommand:
+            producer:
+              configuration:
+                acks: 0         # Producent nie czeka na żadne potwierdzenie od brokera (fire-and-forget)
+                retries: 0      # Żadnych ponowień w przypadku błędu wysyłki
+                # delivery.timeout.ms: 1000 # (Opcjonalnie) Krótki timeout

@@ -1,0 +1,14 @@
+spring:
+  cloud:
+    stream:
+      kafka:
+        bindings:
+          stuffExecutedEvent-in-0:
+            consumer:
+              ack-mode: RECORD # lub BATCH; commit po przetworzeniu (lub ręczny, jeśli potrzebujesz większej kontroli)
+              configuration:
+                # --- Kluczowe dla konsumenta EOS ---
+                # Czytaj tylko wiadomości z zatwierdzonych (committed) transakcji.
+                # Zapobiega odczytaniu wiadomości z transakcji, które zostały przerwane (aborted).
+                isolation.level: read_committed
+                auto.offset.reset: earliest # Aby nic nie przegapić

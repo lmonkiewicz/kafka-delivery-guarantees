@@ -1,0 +1,14 @@
+spring:
+  cloud:
+    stream:
+      kafka:
+        bindings:
+          executeStuffCommand-in-0:
+            consumer:
+              # Główna odpowiedzialność za At-Most-Once spoczywa na producencie.
+              # Konsument powinien przetworzyć to, co otrzyma.
+              # Jeśli wiadomość dotarła (producent jej nie "zgubił"), to jest przetwarzana.
+              # Domyślny ack-mode (np. BATCH lub RECORD) w Spring Cloud Stream jest tu akceptowalny,
+              # ponieważ commit następuje po przetworzeniu. Jeśli przetwarzanie się nie powiedzie,
+              # a producent nie ponawia wysyłki, wiadomość nie zostanie ponownie dostarczona.
+              ack-mode: RECORD # Lub BATCH; commit po przetworzeniu pojedynczej wiadomości/paczki

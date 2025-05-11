@@ -1,0 +1,20 @@
+spring:
+  cloud:
+    stream:
+      kafka:
+        binder:
+          transaction:
+            transaction-id-prefix: app-tx-eos- # Unikalny prefix dla ID transakcji generowanych przez binder
+            producer: # Domyślne ustawienia dla producentów transakcyjnych w ramach bindera
+              configuration:
+                # enable.idempotence jest automatycznie włączane dla producentów transakcyjnych,
+                # acks=all i odpowiednie retries również.
+                # Można tu nadpisać inne potrzebne właściwości producenta.
+                delivery.timeout.ms: 120000 # Zalecany dłuższy timeout dla operacji transakcyjnych
+
+        bindings: # Opcjonalne ustawienia
+          executeStuffCommand-in-0:
+            consumer:
+              configuration:
+                isolation.level: read_uncommitted # Domyślne ustawienie. ew. można zmienić na read_committed, jeśli źródło może być transakcyjne
+                auto.offset.reset: earliest # aby nic nie przegapić

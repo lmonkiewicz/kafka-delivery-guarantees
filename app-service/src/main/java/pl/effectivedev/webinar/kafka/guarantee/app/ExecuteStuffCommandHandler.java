@@ -1,5 +1,6 @@
 package pl.effectivedev.webinar.kafka.guarantee.app;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
@@ -14,13 +15,23 @@ import static pl.effectivedev.webinar.kafka.guarantee.app.ExecuteStuffCommandHan
 
 @Component(BINDING)
 @Slf4j
+@RequiredArgsConstructor
 public class ExecuteStuffCommandHandler
         implements Function<Message<ExecuteStuffCommand>, Message<StuffExecutedEvent>> {
+
+    private final IdempotencyGuard idempotencyGuard;
 
     public static final String BINDING = "executeStuffCommand";
 
     @Override
     public Message<StuffExecutedEvent> apply(Message<ExecuteStuffCommand> message) {
+        final UUID commandId = message.getPayload().commandId();
+
+        if (idempotencyGuard.isDuplicate(commandId)) {
+            log.info("Duplicate detected (commandId: {}), skipping...", commandId);
+            return null;
+        }
+
         var key = message.getHeaders().get(KafkaHeaders.RECEIVED_KEY);
         var input = message.getPayload();
         log.info("Received command: {}:{}", key, input);

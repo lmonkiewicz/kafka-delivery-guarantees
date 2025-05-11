@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ALO - ProducerServiceApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <option name="ACTIVE_PROFILES" value="at-least-once" />
+    <module name="producer-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="pl.effectivedev.webinar.kafka.guarantee.producer.ProducerServiceApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
