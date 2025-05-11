@@ -29,12 +29,18 @@ Kod źródłowy do webinaru [Gwarancje dostarczania wiadomości w Apache Kafka](
 W repozytorium znajdziesz implementację 3 serwisów.
 
 ```mermaid
-graph LR
-    A[producer-service] --> B[topik: app-execute_stuff-command]
-    B --> C[app-service]
-    C --> D[event: app-stuff_executed-event]
-    D --> E[consumer-service]
+flowchart LR
+    A["producer-service"] --> B(["app-execute_stuff-command"])
+    B --> C["app-service"]
+    C --> D(["app-stuff_executed-event"])
+    D --> E["consumer-service"]
 
+    A@{ shape: rounded}
+    C@{ shape: rounded}
+    E@{ shape: rounded}
+    style A color:#FFFFFF,fill:#00C853
+    style C color:#FFFFFF,fill:#00C853
+    style E color:#FFFFFF,fill:#00C853
 
 ```
 
